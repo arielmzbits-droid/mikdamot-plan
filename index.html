@@ -1,0 +1,936 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>תוכנית בדיקת המקדמות</title>
+<style>
+:root{
+  --bg:#f7f6f2; --surface:#ffffff; --surface-2:#f1f0eb; --text:#1f2328; --muted:#5d636b;
+  --border:#e2e0d8; --accent:#2f6f73; --accent-soft:#e3efef; --accent-text:#ffffff;
+  --ok:#2e6b3f; --ok-soft:#e5f1e8; --bad:#9a3b2f; --bad-soft:#f6e6e2; --wait:#8a6212; --wait-soft:#f6eedb;
+  --line:#8b9196; --hl:#f3d98b; --hl-text:#1f2328; --shadow:0 1px 2px rgba(0,0,0,.04);
+  --radius:10px; --nav-w:250px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#16191c; --surface:#1e2226; --surface-2:#252a2f; --text:#e6e8ea; --muted:#a3aab1;
+    --border:#343a40; --accent:#7fbfc2; --accent-soft:#233a3c; --accent-text:#0f1a1b;
+    --ok:#8fd0a0; --ok-soft:#1f3326; --bad:#f0a596; --bad-soft:#3a2420; --wait:#e6c27a; --wait-soft:#3a3020;
+    --line:#8e969d; --hl:#6b5a24; --hl-text:#fff7dd; --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16191c; --surface:#1e2226; --surface-2:#252a2f; --text:#e6e8ea; --muted:#a3aab1;
+  --border:#343a40; --accent:#7fbfc2; --accent-soft:#233a3c; --accent-text:#0f1a1b;
+  --ok:#8fd0a0; --ok-soft:#1f3326; --bad:#f0a596; --bad-soft:#3a2420; --wait:#e6c27a; --wait-soft:#3a3020;
+  --line:#8e969d; --hl:#6b5a24; --hl-text:#fff7dd; --shadow:none;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Segoe UI",Arial,"Noto Sans Hebrew",sans-serif;font-size:16px;line-height:1.65;overflow-x:hidden}
+a{color:var(--accent)}
+h1,h2,h3{line-height:1.3;margin:0 0 .6em}
+h1{font-size:1.7rem}
+h2{font-size:1.4rem;padding-bottom:.4em;border-bottom:1px solid var(--border);margin-bottom:1em}
+h3{font-size:1.08rem;margin-top:1.2em}
+p{margin:.4em 0 .8em}
+code,.mono{font-family:Consolas,"Courier New",monospace;font-size:.9em;direction:ltr;unicode-bidi:embed}
+/* nav */
+nav.side{position:fixed;top:0;right:0;width:var(--nav-w);height:100vh;overflow-y:auto;background:var(--surface);border-left:1px solid var(--border);padding:20px 14px}
+nav.side .brand{font-weight:700;font-size:1.05rem;margin-bottom:2px}
+nav.side .sub{color:var(--muted);font-size:.85rem;margin-bottom:14px}
+nav.side ol{list-style:none;margin:0;padding:0}
+nav.side li a{display:block;padding:7px 10px;border-radius:8px;text-decoration:none;color:var(--text);font-size:.95rem}
+nav.side li a:hover,nav.side li a:focus{background:var(--surface-2)}
+nav.side li a.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+nav.side .num{display:inline-block;min-width:1.6em;color:var(--muted)}
+main{margin-right:var(--nav-w);padding:28px 32px 80px}
+.wrap{max-width:1100px;margin:0 auto}
+section{scroll-margin-top:16px;margin-bottom:56px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);margin-bottom:16px}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))}
+.g5{grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr))}
+.kpi{text-align:center;padding:16px 10px}
+.kpi .v{font-size:2rem;font-weight:700;color:var(--accent);line-height:1.1}
+.kpi .l{color:var(--muted);font-size:.9rem}
+.note{color:var(--muted);font-size:.88rem}
+.badge{display:inline-block;padding:1px 10px;border-radius:999px;font-size:.82rem;font-weight:600;border:1px solid transparent;white-space:nowrap}
+.b-ok{background:var(--ok-soft);color:var(--ok)}
+.b-bad{background:var(--bad-soft);color:var(--bad)}
+.b-wait{background:var(--wait-soft);color:var(--wait)}
+.b-acc{background:var(--accent-soft);color:var(--accent)}
+.b-plain{background:var(--surface-2);color:var(--muted);border-color:var(--border)}
+.status-line{display:inline-block;background:var(--wait-soft);color:var(--wait);font-weight:700;padding:4px 14px;border-radius:8px}
+dfn,.term{font-style:normal;border-bottom:1px dotted var(--muted);cursor:help}
+.gl{display:block;color:var(--muted);font-size:.82rem;line-height:1.45}
+/* tables */
+.tbl{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);margin-bottom:16px}
+table{border-collapse:collapse;width:100%;font-size:.93rem}
+th,td{text-align:right;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+th{background:var(--surface-2);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:left;direction:ltr;white-space:nowrap;font-variant-numeric:tabular-nums}
+tr.total td{font-weight:700}
+/* timeline */
+.timeline{position:relative;margin:0;padding:0;list-style:none}
+.timeline>li{position:relative;padding-right:34px;margin-bottom:16px}
+.timeline>li::before{content:"";position:absolute;right:10px;top:8px;bottom:-22px;width:2px;background:var(--border)}
+.timeline>li:last-child::before{display:none}
+.timeline .dot{position:absolute;right:2px;top:6px;width:18px;height:18px;border-radius:50%;background:var(--surface);border:3px solid var(--accent)}
+.timeline .dot.wait{border-color:var(--wait)}
+.timeline .dot.plain{border-color:var(--line)}
+/* round steps */
+.who{font-size:.8rem}
+.w-user{background:var(--accent-soft);color:var(--accent)}
+.w-prog{background:var(--surface-2);color:var(--text);border-color:var(--border)}
+.w-claude{background:var(--wait-soft);color:var(--wait)}
+tr.step{cursor:pointer}
+tr.step:hover td{background:var(--surface-2)}
+tr.step.sel td{background:var(--accent-soft)}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 14px}
+.pill{padding:3px 10px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:.84rem;color:var(--muted)}
+.pill.on,.comp.on{background:var(--hl);color:var(--hl-text);border-color:transparent}
+.comp.on{outline:2px solid var(--hl)}
+/* diagram */
+.diagram svg{width:100%;height:auto;display:block}
+.diagram .box rect{fill:var(--surface);stroke:var(--accent);stroke-width:1.6}
+.diagram .ext rect{fill:var(--surface-2);stroke:var(--line);stroke-width:1.2;stroke-dasharray:5 4}
+.diagram .usr rect{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.2}
+.diagram text{fill:var(--text);font-family:"Segoe UI",Arial,sans-serif;font-size:15px}
+.diagram text.s{fill:var(--muted);font-size:12.5px}
+.diagram .arr{stroke:var(--line);stroke-width:1.6;fill:none}
+.diagram .ah{fill:var(--line)}
+.diagram .box.on rect{fill:var(--hl);stroke:var(--wait)}
+.diagram .box.on text{fill:var(--hl-text)}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:.85rem;color:var(--muted);margin-top:8px}
+.legend span::before{content:"";display:inline-block;width:14px;height:10px;margin-left:6px;vertical-align:middle;border:1.6px solid var(--accent);background:var(--surface);border-radius:3px}
+.legend span.e::before{border:1.2px dashed var(--line);background:var(--surface-2)}
+.legend span.u::before{background:var(--accent-soft)}
+/* components */
+.comp{border-radius:var(--radius)}
+.comp h3{margin-top:0}
+.comp .io{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:.9rem}
+.comp .io b{color:var(--muted);font-weight:600}
+.cnum{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--accent-text);font-size:.85rem;font-weight:700;margin-left:8px}
+/* formulas */
+ol.calc{padding-right:1.2em}
+ol.calc li{margin-bottom:10px}
+.f{display:block;background:var(--surface-2);border-radius:6px;padding:6px 10px;margin-top:4px;font-size:.92rem}
+/* mock screens */
+.mock{border:1px solid var(--border);border-radius:12px;background:var(--surface);overflow:hidden;margin-bottom:22px}
+.mock .bar{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--surface-2);border-bottom:1px solid var(--border);font-size:.85rem;color:var(--muted)}
+.mock .bar .dots{display:inline-flex;gap:5px}
+.mock .bar .dots i{width:9px;height:9px;border-radius:50%;background:var(--border);display:inline-block}
+.mock .body{padding:16px}
+.mock .banner{background:var(--accent-soft);color:var(--accent);padding:8px 12px;border-radius:8px;margin-bottom:12px;font-weight:600}
+.mock .btn{display:inline-block;padding:5px 14px;border-radius:7px;border:1px solid var(--accent);color:var(--accent);font-size:.88rem;background:transparent}
+.mock .btn.p{background:var(--accent);color:var(--accent-text)}
+.mock .field{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed var(--border);padding:5px 0;font-size:.92rem}
+.mock .field span:first-child{color:var(--muted)}
+.mock textarea{width:100%;min-height:180px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text);font:inherit;font-size:.92rem;padding:10px;resize:vertical}
+.mini-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(110px,100%),1fr));gap:8px;margin-bottom:12px}
+.mini-kpi div{border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center;font-size:.85rem;color:var(--muted)}
+.mini-kpi b{display:block;font-size:1.3rem;color:var(--text)}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.input-mock{border:1px solid var(--border);border-radius:7px;padding:4px 10px;color:var(--muted);font-size:.88rem;min-width:140px;background:var(--surface-2)}
+/* filters */
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.filters button{font:inherit;font-size:.88rem;padding:4px 14px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer}
+.filters button.on{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.hide{display:none}
+.callout{border-right:4px solid var(--accent);background:var(--surface);padding:12px 16px;border-radius:8px;margin:12px 0}
+.callout.warn{border-right-color:var(--wait)}
+ul.clean{padding-right:1.2em;margin:.3em 0}
+ul.clean li{margin-bottom:4px}
+footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--border);padding-top:14px}
+.skip{position:absolute;top:0;right:0;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.skip:focus{width:auto;height:auto;clip:auto;right:10px;top:10px;background:var(--surface);padding:6px 10px;z-index:10}
+@media (max-width:900px){
+  nav.side{position:sticky;top:0;width:100%;height:auto;border-left:0;border-bottom:1px solid var(--border);padding:8px 10px;z-index:5}
+  nav.side .brand,nav.side .sub{display:none}
+  nav.side ol{display:flex;overflow-x:auto;gap:4px;white-space:nowrap;scrollbar-width:thin}
+  nav.side li a{padding:6px 10px;font-size:.88rem}
+  main{margin-right:0;padding:18px 16px 60px}
+  section{scroll-margin-top:60px}
+  h1{font-size:1.4rem}
+}
+@media print{nav.side{display:none}main{margin:0}}
+</style>
+</head>
+<body>
+<a class="skip" href="#s1">דלג לתוכן</a>
+<nav class="side" aria-label="ניווט בין הסעיפים">
+  <div class="brand">בדיקת מקדמות</div>
+  <div class="sub">חלון לתוכנית - עוד לא נבנה</div>
+  <ol>
+    <li><a href="#s1"><span class="num">1</span>סקירה</a></li>
+    <li><a href="#s2"><span class="num">2</span>שלבי הבנייה</a></li>
+    <li><a href="#s3"><span class="num">3</span>סבב של חודשיים</a></li>
+    <li><a href="#s4"><span class="num">4</span>רכיבים</a></li>
+    <li><a href="#s5"><span class="num">5</span>החישוב</a></li>
+    <li><a href="#s6"><span class="num">6</span>כרטיס לקוח ונתונים</a></li>
+    <li><a href="#s7"><span class="num">7</span>סטטוסים ואישור עצמי</a></li>
+    <li><a href="#s8"><span class="num">8</span>מסכים</a></li>
+    <li><a href="#s9"><span class="num">9</span>שיעורים וכללים</a></li>
+    <li><a href="#s10"><span class="num">10</span>החלטות</a></li>
+    <li><a href="#s11"><span class="num">11</span>פתוח ושאלות</a></li>
+    <li><a href="#s12"><span class="num">12</span>מסמכים</a></li>
+  </ol>
+</nav>
+
+<main>
+<div class="wrap">
+
+<!-- 1 -->
+<section id="s1">
+  <h1>בדיקת מקדמות דו-חודשית לעצמאים</h1>
+  <p><span class="status-line">תכנון - עוד לא נבנה</span></p>
+  <p>הדף מציג את כל מה שיהיה בתוכנה המתוכננת: נתונים, שלבים, רכיבים, זרימות, סטטוסים, מסכים, כללים, החלטות ומה שעוד פתוח. שום קוד עוד לא נכתב. כל המספרים בדוגמאות מומצאים או לקוחים מהדוגמה המאומתת. מעודכן לפי המסמכים מ-22.11.2026.</p>
+
+  <div class="grid g5">
+    <div class="card kpi"><div class="v">~50</div><div class="l">לקוחות עצמאיים (יחידים בלבד)</div></div>
+    <div class="card kpi"><div class="v">2</div><div class="l">חודשים בין סבב לסבב (6 בשנה)</div></div>
+    <div class="card kpi"><div class="v">2%</div><div class="l">סף: עד 2% תקין, בלי סכום מינימלי</div></div>
+    <div class="card kpi"><div class="v">5</div><div class="l">שלבי בנייה, כל שלב בהוראה שלך</div></div>
+    <div class="card kpi"><div class="v">10</div><div class="l">רכיבים בתוכנה</div></div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <h3 style="margin-top:0">מה התוכנה עושה</h3>
+      <ul class="clean">
+        <li>פעם בחודשיים קוראת את דוח הרווח וההפסד של כל לקוח (<dfn title="קובץ מסמך מוכן להדפסה">PDF</dfn> מריווחית), או רווח שהקלדת.</li>
+        <li>מתאימה את הרווח לרווח לצורך מס, מגדילה אותו לשנה שלמה, ומחשבת מס הכנסה וביטוח לאומי שנתיים לפי כרטיס הלקוח.</li>
+        <li>משווה כל מס בנפרד למה שהלקוח צפוי לשלם (מקדמות, ניכוי במקור, מס מהמשכורת).</li>
+        <li>לכל לקוח: <span class="badge b-ok">תקין</span> <span class="badge b-bad">לא תקין - חסר / ביתר</span> <span class="badge b-wait">ממתין לאישור</span></li>
+        <li>מציגה דשבורד, פירוט כל שלב בחישוב, וטיוטת הודעה להעתקה. שום דבר לא נשלח לבד.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">היקף</h3>
+      <p><b>כלול:</b> עצמאים יחידים; PDF מריווחית או הקלדה; החזרות לרווח; משכורת במקביל, ניכוי במקור, מס יסף, פנסיה, קרן השתלמות, תרומות; אישור עצמי; דשבורד, כרטיס, טיוטות, ייצוא לאקסל, הגדרות; יומן, גיבוי, שמירה ומחיקה.</p>
+      <p><b>לא כלול:</b> חברות בע"מ; שליחה, הגשה או תשלום; חיבור לאתרי רשות המסים, ביטוח לאומי או ריווחית; הצמדה וריבית (גרסה 2); תחזית שנייה לפי שנה קודמת (אחרי בדיקת הקבלה); העברת נתונים בין מחשבים.</p>
+      <p class="note">תוכנה מקומית: רצה רק במחשב שלך, בלי ענן ובלי אינטרנט. עובדת בכל מחשב שלך, וכל מחשב שומר את הנתונים שלו.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section id="s2">
+  <h2>2. שלבי הבנייה</h2>
+  <p>Claude בונה בשלבים. כל שלב מתחיל רק בהוראה מפורשת שלך. בסוף כל שלב: <dfn title="קוד קטן שמריץ חישוב ידוע ובודק שהתוצאה נכונה">טסטים</dfn>, בדיקה בדפדפן (משלב 2), דיווח, והמתנה להוראה.</p>
+  <div class="callout warn"><b>מצב נוכחי:</b> כל השלבים עוד לא התחילו. שלב 1 ממתין לאישור מפורש נוסף שלך ("לא להתחיל בלי אישור", 22.11).</div>
+  <ol class="timeline">
+    <li><span class="dot wait"></span><div class="card">
+      <h3 style="margin-top:0">שלב 1 - מנוע חישוב וטסטים <span class="badge b-wait">ממתין לאישור להתחלה</span></h3>
+      <p><b>מה נבנה:</b> טוען שיעורים, מנוע חישוב, יומן בסיסי.</p>
+      <p><b>טסטים:</b> טסט לכל ענף בחישוב (כל שיטת מקדמה, כל כלל פנסיה, כל רצועת ביטוח לאומי, מס יסף, תרומות מתחת ל-207 ומעל 30%, בדיוק 2.0%); הדוגמה המאומתת 240,000 (סטייה עד 0.5 ש"ח); <dfn title="דוגמה קבועה עם תוצאה ידועה, שנבדקת בכל הפעלה">קובץ זהב</dfn>; בדיקה שאין מספר מס בתוך הקוד.</p>
+      <p><b>בסוף השלב:</b> 3 לקוחות מומצאים שאתה מחשב בתוכנת הדוחות השנתיים שלך (כחצי שעה). עד 1 ש"ח הבדל = תואם.</p>
+    </div></li>
+    <li><span class="dot plain"></span><div class="card">
+      <h3 style="margin-top:0">שלב 2 - כרטיסי לקוחות והזנה <span class="badge b-plain">לא התחיל</span></h3>
+      <p><b>מה נבנה:</b> מאגר נתונים, כרטיס לקוח, הזנה ידנית, קליטה שנתית, יומן, הגדרות.</p>
+      <p><b>טסטים:</b> שמירה וקריאה, 30 גרסאות, כתיבה בטוחה, שרשרת היומן (כולל ניסיון שינוי שמתגלה), קליטת CSV (קובץ עם שגיאה אחת נדחה כולו), אישור כרטיס לשנה. בדיקה בדפדפן.</p>
+    </div></li>
+    <li><span class="dot plain"></span><div class="card">
+      <h3 style="margin-top:0">שלב 3 - דשבורד <span class="badge b-plain">לא התחיל</span></h3>
+      <p><b>מה נבנה:</b> דשבורד ומסכים, מסך שולם עד היום.</p>
+      <p><b>טסטים:</b> מונים שמסתכמים במספר הלקוחות הפעילים, סדר מיון, מילוי מראש לכל שיטת מקדמה, פיגור, מסך לא מאושר = ממתין, הודעת "הסבב פתוח" ביום 25, הגנה על ה-<dfn title="דלת פנימית שדרכה המסך מבקש נתונים מהתוכנה">API</dfn>. בדיקה בדפדפן.</p>
+    </div></li>
+    <li><span class="dot plain"></span><div class="card">
+      <h3 style="margin-top:0">שלב 4 - קריאת PDF ואישור עצמי <span class="badge b-plain">לא התחיל</span></h3>
+      <p><b>מה נבנה:</b> קורא PDF, מסווג שורות, אישור עצמי ומדגם.</p>
+      <p><b>טסטים:</b> דוחות PDF מומצאים (תקין, סכום שגוי, תקופה חתוכה, סוגריים, כמה עמודים, עמודת השוואה, תווים עבריים שבורים); סיווג ולמידה; כל תנאי אישור עצמי בנפרד; מדגם.</p>
+      <p><b>נדרש קודם:</b> קובץ מבנה החשבונות מריווחית.</p>
+    </div></li>
+    <li><span class="dot plain"></span><div class="card">
+      <h3 style="margin-top:0">שלב 5 - הודעות, ייצוא, גיבוי, מדריך, נוהל אבטחה <span class="badge b-plain">לא התחיל</span></h3>
+      <p><b>מה נבנה:</b> טיוטות הודעה, ייצוא CSV, גיבוי חיצוני ושחזור, מעבר שנה, מדריך עמוד אחד, דף נוהל אבטחה ודף "מחשב אבד" (באישורך).</p>
+      <p><b>טסטים:</b> טיוטה לכל טווח חודשים, "ביתר" רק בלחיצה, משפט החובה, CSV עם <dfn title="סימן בתחילת הקובץ שגורם לאקסל להציג עברית נכון">BOM</dfn>, גיבוי ושחזור, חישוב תקופת שמירה.</p>
+    </div></li>
+    <li><span class="dot plain"></span><div class="card">
+      <h3 style="margin-top:0">בדיקת קבלה <span class="badge b-plain">לא התחיל</span></h3>
+      <p>במחשב שלך: התוכנה קוראת את הדוח האמיתי ונתוני שנה קודמת לכ-5 לקוחות. אתה מקליד את המספר שחישבת. Claude רואה רק "תואם / לא תואם" וגודל הסטייה באחוזים, בלי סכומים.</p>
+      <p>אחר כך: החלטה על תחזית שנייה, פריסה לענף הראשי באישור נפרד, ומחיקת המספרים האמיתיים מהיסטוריית <dfn title="מערכת ששומרת היסטוריה של כל שינוי">Git</dfn> באישור נפרד.</p>
+    </div></li>
+  </ol>
+</section>
+
+<!-- 3 -->
+<section id="s3">
+  <h2>3. סבב של חודשיים, צעד אחר צעד</h2>
+  <p>"סבב" = בדיקה אחת של כל הלקוחות לתקופה אחת, למשל 1-10/2026. כל שמירה בכל צעד: הגרסה הקודמת נשמרת ורשומה נכתבת ליומן.</p>
+  <p class="note">לחיצה על צעד מדגישה את הרכיבים שמשתתפים בו (כאן ובתרשים בסעיף 4). לחיצה נוספת מבטלת.</p>
+  <div class="pills" id="pills" aria-live="polite">
+    <span class="pill" data-c="1">1 טוען שיעורים</span><span class="pill" data-c="2">2 מנוע חישוב</span><span class="pill" data-c="3">3 מאגר נתונים</span><span class="pill" data-c="4">4 קורא PDF</span><span class="pill" data-c="5">5 מסווג שורות</span><span class="pill" data-c="6">6 מסך שולם עד היום</span><span class="pill" data-c="7">7 אישור עצמי</span><span class="pill" data-c="8">8 דשבורד ומסכים</span><span class="pill" data-c="9">9 גיבוי ואבטחה</span><span class="pill" data-c="10">10 קליטה שנתית</span>
+  </div>
+  <div class="tbl"><table id="round">
+    <thead><tr><th>#</th><th>צעד</th><th>מי</th><th>מה קורה</th></tr></thead>
+    <tbody>
+      <tr class="step" data-c="8" tabindex="0"><td>1</td><td>הודעת "הסבב פתוח"</td><td><span class="badge who w-prog">התוכנה</span></td><td>מה-25 בחודש שאחרי סוף התקופה (ניתן לשינוי) מופיעה הודעה בדשבורד.</td></tr>
+      <tr class="step" data-c="1,3,8" tabindex="0"><td>2</td><td>פתיחת סבב</td><td><span class="badge who w-user">אתה</span></td><td>לוחץ "פתח סבב". גרסת השיעורים וההגדרות מקובעת לסבב. שינוי הגדרות מכאן לא משפיע עליו.</td></tr>
+      <tr class="step" data-c="3,8" tabindex="0"><td>3</td><td>"הספרים מעודכנים עד חודש X"</td><td><span class="badge who w-user">אתה</span></td><td>מסמן לכל לקוח. אם לא מעודכנים: "ממתין לאישור".</td></tr>
+      <tr class="step" data-c="8,4" tabindex="0"><td>4</td><td>העלאת דוחות</td><td><span class="badge who w-user">אתה</span></td><td>מעלה את כל קובצי ה-PDF בבת אחת, או מקליד רווח ידנית.</td></tr>
+      <tr class="step" data-c="4,3" tabindex="0"><td>5</td><td>שיוך ללקוח</td><td><span class="badge who w-prog">התוכנה</span> <span class="badge who w-user">אתה</span></td><td>התוכנה מציעה לקוח לפי שם העסק בדוח. שם לא תואם לכרטיס = אי אפשר לשמור.</td></tr>
+      <tr class="step" data-c="4" tabindex="0"><td>6</td><td>קריאה</td><td><span class="badge who w-prog">התוכנה</span></td><td>שתי קריאות בשתי שיטות, תיקון עברית, חילוץ שורות, בדיקת סכומים.</td></tr>
+      <tr class="step" data-c="5" tabindex="0"><td>7</td><td>סיווג שורות</td><td><span class="badge who w-prog">התוכנה</span></td><td>שורות ידועות מסווגות לבד. שורה לא מוכרת או כיבוד בלי הגדרה = שאלה אליך.</td></tr>
+      <tr class="step" data-c="8,5,3" tabindex="0"><td>8</td><td>אישור מה שנקרא</td><td><span class="badge who w-user">אתה</span></td><td>רואה מה נקרא לפני שמירה, ומסווג שורות חדשות פעם אחת. התוכנה זוכרת.</td></tr>
+      <tr class="step" data-c="6,8" tabindex="0"><td>9</td><td>שולם עד היום</td><td><span class="badge who w-user">אתה</span></td><td>מסך אחד לכל הלקוחות, ממולא מראש. בודק מול <dfn title="האתר של רשות המסים וביטוח לאומי לרואי חשבון ומייצגים">מערכת המייצגים</dfn>, מתקן הבדלים ומאשר. לא אושר = "ממתין לאישור".</td></tr>
+      <tr class="step" data-c="2,1" tabindex="0"><td>10</td><td>חישוב</td><td><span class="badge who w-prog">התוכנה</span></td><td>מס הכנסה וביטוח לאומי בנפרד, עם פירוט כל שלב.</td></tr>
+      <tr class="step" data-c="7" tabindex="0"><td>11</td><td>אישור עצמי ומדגם</td><td><span class="badge who w-prog">התוכנה</span></td><td>מאשרת לבד רק מה שמותר, ובוחרת מדגם: 3 אקראיים + המס הגדול ביותר + השינוי הגדול ביותר.</td></tr>
+      <tr class="step" data-c="8,3" tabindex="0"><td>12</td><td>סקירה</td><td><span class="badge who w-user">אתה</span></td><td>עובר על הרשימה לפי הסדר: ממתין לאישור, דורש מעקב, לא תקין חסר, לא תקין ביתר, תקין. לכל "ממתין": לאשר, לתקן, לשנות תוצאה (עם סיבה) או לדחות. בודק את המדגם.</td></tr>
+      <tr class="step" data-c="8" tabindex="0"><td>13</td><td>טיוטת הודעה</td><td><span class="badge who w-prog">התוכנה</span> <span class="badge who w-user">אתה</span></td><td>ל"לא תקין - חסר" נוצרת טיוטה לפי הזמן בשנה. אתה עורך, מעתיק, שולח בעצמך ומסמן "נשלחה".</td></tr>
+      <tr class="step" data-c="8,3" tabindex="0"><td>14</td><td>סגירה</td><td><span class="badge who w-user">אתה</span></td><td>בודק שהמונה "לא נבדק בסבב הזה" הוא 0. ייצוא CSV אם רוצים.</td></tr>
+      <tr class="step" data-c="9" tabindex="0"><td>15</td><td>גיבוי</td><td><span class="badge who w-prog">התוכנה</span> <span class="badge who w-user">אתה</span></td><td>תזכורת אם עבר יותר מסבב מאז הגיבוי. מחברים דיסק נייד מוצפן ולוחצים "גבה לדיסק חיצוני".</td></tr>
+    </tbody>
+  </table></div>
+  <div class="grid g3">
+    <div class="card"><span class="badge who w-user">אתה</span><p>מספק דוחות, ממלא ומאשר כרטיסים, בודק "שולם עד היום", מסווג שורות חדשות, מחליט על כל "לא תקין" ו"ממתין", בודק את המדגם, שולח הודעות בעצמך, מקבל כל החלטה מקצועית.</p></div>
+    <div class="card"><span class="badge who w-prog">התוכנה</span><p>קוראת, מסווגת, ממלאת מראש, מחשבת, מריצה בדיקות עצמיות, מאשרת לבד רק לפי הכללים, מכינה טיוטות, שומרת גרסאות ויומן, מזכירה לגבות. לא שולחת ולא מגישה.</p></div>
+    <div class="card"><span class="badge who w-claude">Claude</span><p>בונה את התוכנה בשלבים, כותב טסטים, מכין טבלת שיעורים לשנה חדשה עם שתי בדיקות, מכין מדריך ודף נוהל. לא רואה נתוני לקוחות אמיתיים.</p></div>
+  </div>
+  <h3>פעם בשנה (קליטה ומעבר שנה)</h3>
+  <ol class="calc">
+    <li>Claude מכין טבלת שיעורים לשנה החדשה, מאמת בשתי בדיקות, ואתה מאשר. עד אז: שיעורי השנה הקודמת עם הודעה, בלי אישור עצמי.</li>
+    <li>אתה ממלא גיליון אקסל אחד לכל הלקוחות (כ-3-4 שעות) ושומר כ-<dfn title="קובץ טבלה פשוט שאקסל פותח">CSV</dfn>. שגיאה בשורה אחת = כל הקובץ נדחה.</li>
+    <li>כל כרטיס שנקלט מסומן "לא אושר" עד שאתה לוחץ "אני מאשר את הכרטיס לשנה X" (עם תזכורת על הטבות שפוקעות).</li>
+    <li>בינואר: מקדמת ביטוח לאומי מהמכתב השנתי. עד אז: סכום השנה הקודמת, עם סימון, בלי אישור עצמי.</li>
+    <li>אחרי הדוח השנתי: השוואת ההערכה האחרונה למס הסופי (מוצגות רק סטיות מעל 2%), ואז השנה נסגרת לקריאה בלבד.</li>
+  </ol>
+</section>
+
+<!-- 4 -->
+<section id="s4">
+  <h2>4. רכיבים</h2>
+  <p>עשרה חלקים, לכל אחד תפקיד אחד. שום חץ לא יוצא לאינטרנט, ושום דבר לא נשלח אוטומטית.</p>
+  <div class="card diagram" role="img" aria-label="תרשים הרכיבים וזרימת הנתונים">
+    <svg viewBox="0 0 980 760" xmlns="http://www.w3.org/2000/svg" direction="rtl">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+      </defs>
+      <!-- external inputs row -->
+      <g class="ext"><rect x="730" y="20" width="200" height="52" rx="8"/><text x="830" y="43" text-anchor="middle">גיליון שנתי (CSV)</text><text class="s" x="830" y="62" text-anchor="middle">כרטיסי הלקוחות</text></g>
+      <g class="ext"><rect x="500" y="20" width="200" height="52" rx="8"/><text x="600" y="43" text-anchor="middle">rates/2026.json</text><text class="s" x="600" y="62" text-anchor="middle">טבלת שיעורים, עותק אחד</text></g>
+      <g class="ext"><rect x="270" y="20" width="200" height="52" rx="8"/><text x="370" y="43" text-anchor="middle">דוח PDF מריווחית</text><text class="s" x="370" y="62" text-anchor="middle">רווח והפסד מתחילת השנה</text></g>
+      <g class="ext"><rect x="40" y="20" width="200" height="52" rx="8"/><text x="140" y="43" text-anchor="middle">מערכת המייצגים</text><text class="s" x="140" y="62" text-anchor="middle">אתה מסתכל, התוכנה לא מתחברת</text></g>
+      <!-- row 2 -->
+      <g class="box" data-c="10"><rect x="730" y="120" width="200" height="52" rx="8"/><text x="830" y="152" text-anchor="middle">10 קליטה שנתית</text></g>
+      <g class="box" data-c="1"><rect x="500" y="120" width="200" height="52" rx="8"/><text x="600" y="152" text-anchor="middle">1 טוען שיעורים</text></g>
+      <g class="box" data-c="4"><rect x="270" y="120" width="200" height="52" rx="8"/><text x="370" y="152" text-anchor="middle">4 קורא PDF</text></g>
+      <g class="box" data-c="6"><rect x="40" y="120" width="200" height="52" rx="8"/><text x="140" y="144" text-anchor="middle">6 מסך שולם עד היום</text><text class="s" x="140" y="162" text-anchor="middle">אתה בודק ומאשר</text></g>
+      <!-- row 3 -->
+      <g class="box" data-c="5"><rect x="270" y="220" width="200" height="52" rx="8"/><text x="370" y="244" text-anchor="middle">5 מסווג שורות</text><text class="s" x="370" y="262" text-anchor="middle">זוכר סיווגים</text></g>
+      <!-- row 4 -->
+      <g class="box" data-c="3"><rect x="730" y="330" width="200" height="60" rx="8"/><text x="830" y="356" text-anchor="middle">3 מאגר נתונים</text><text class="s" x="830" y="376" text-anchor="middle">כרטיסים, סבבים, יומן</text></g>
+      <g class="box" data-c="2"><rect x="280" y="330" width="300" height="60" rx="8"/><text x="430" y="356" text-anchor="middle">2 מנוע חישוב</text><text class="s" x="430" y="376" text-anchor="middle">חישוב טהור, בלי קבצים, עם פירוט כל שלב</text></g>
+      <!-- row 5 -->
+      <g class="box" data-c="7"><rect x="330" y="450" width="200" height="60" rx="8"/><text x="430" y="476" text-anchor="middle">7 אישור עצמי</text><text class="s" x="430" y="496" text-anchor="middle">5 בדיקות + מדגם</text></g>
+      <!-- row 6 -->
+      <g class="box" data-c="8"><rect x="730" y="560" width="200" height="60" rx="8"/><text x="830" y="586" text-anchor="middle">8 דשבורד ומסכים</text><text class="s" x="830" y="606" text-anchor="middle">בדפדפן, 127.0.0.1 בלבד</text></g>
+      <g class="usr"><rect x="470" y="565" width="180" height="50" rx="25"/><text x="560" y="586" text-anchor="middle">אתה</text><text class="s" x="560" y="604" text-anchor="middle">טיוטות להעתקה, CSV</text></g>
+      <!-- row 7 -->
+      <g class="box" data-c="9"><rect x="730" y="670" width="200" height="60" rx="8"/><text x="830" y="696" text-anchor="middle">9 גיבוי ואבטחה</text><text class="s" x="830" y="716" text-anchor="middle">30 גרסאות, יומן</text></g>
+      <g class="ext"><rect x="470" y="675" width="180" height="50" rx="8"/><text x="560" y="697" text-anchor="middle">דיסק נייד מוצפן</text><text class="s" x="560" y="715" text-anchor="middle">BitLocker To Go</text></g>
+      <!-- arrows -->
+      <path class="arr" marker-end="url(#ah)" d="M830,72 L830,118"/>
+      <path class="arr" marker-end="url(#ah)" d="M600,72 L600,118"/>
+      <path class="arr" marker-end="url(#ah)" d="M370,72 L370,118"/>
+      <path class="arr" marker-end="url(#ah)" d="M140,72 L140,118"/>
+      <path class="arr" marker-end="url(#ah)" d="M370,172 L370,218"/>
+      <path class="arr" marker-end="url(#ah)" d="M830,172 L830,328"/>
+      <path class="arr" marker-end="url(#ah)" d="M580,172 L500,328"/>
+      <path class="arr" marker-end="url(#ah)" d="M370,272 L390,328"/>
+      <path class="arr" marker-end="url(#ah)" d="M160,172 L300,328"/>
+      <path class="arr" marker-start="url(#ah)" marker-end="url(#ah)" d="M584,360 L726,360"/>
+      <path class="arr" marker-end="url(#ah)" d="M430,390 L430,448"/>
+      <path class="arr" marker-end="url(#ah)" d="M532,470 L740,392"/>
+      <path class="arr" marker-start="url(#ah)" marker-end="url(#ah)" d="M830,394 L830,556"/>
+      <path class="arr" marker-start="url(#ah)" marker-end="url(#ah)" d="M654,590 L726,590"/>
+      <path class="arr" marker-end="url(#ah)" d="M830,620 L830,666"/>
+      <path class="arr" marker-end="url(#ah)" d="M728,700 L652,700"/>
+      <text class="s" x="655" y="352" text-anchor="middle">כרטיס, תוצאה</text>
+      <text class="s" x="672" y="474" text-anchor="middle">תוצאה + החלטה</text>
+    </svg>
+    <div class="legend"><span>רכיב בתוכנה</span><span class="e">מקור חיצוני (לא חלק מהתוכנה)</span><span class="u">אתה</span></div>
+  </div>
+
+  <div class="grid g2" id="comps">
+    <div class="card comp" data-c="1"><h3><span class="cnum">1</span>טוען שיעורים</h3><p>קורא את טבלת השיעורים של השנה, בודק שכל הערכים קיימים, ומוסיף שינויים ששמרת במסך ההגדרות. אם חסר ערך: מסרב לחשב ומציג מה חסר.</p><div class="io"><b>נכנס</b><span>rates/2026.json (מהריפו של החוקים, ענף dev), הגדרות שלך</span><b>יוצא</b><span>"שיעורים בתוקף" + <dfn title="מספר קצר שמחושב מתוך התוכן. שינוי של תו אחד משנה אותו">טביעת אצבע</dfn>, כדי שכל בדיקה תזכור באיזו גרסה חושבה</span></div></div>
+    <div class="card comp" data-c="2"><h3><span class="cnum">2</span>מנוע חישוב</h3><p>מחשב ללקוח אחד בסבב אחד: רווח לצורך מס, הגדלה לשנה, ניכויים, ביטוח לאומי ובריאות, מס הכנסה, מקדמה צפויה, פער ותוצאה. כל שלב מחזיר שורת הסבר. לא קורא קבצים ולא ניגש לרשת.</p><div class="io"><b>נכנס</b><span>כרטיס, סכומים מהדוח אחרי סיווג, "שולם עד היום" מאושר, שיעורים</span><b>יוצא</b><span>לכל מס: נדרש, צפוי, פער בש"ח וב-%, תקין / לא תקין, חסר / ביתר; שורות פירוט</span></div></div>
+    <div class="card comp" data-c="3"><h3><span class="cnum">3</span>מאגר נתונים</h3><p>שומר ומחזיר כרטיסים, סבבים, סיווגי שורות, הגדרות ויומן. לפני כל שמירה שומר את הגרסה הקודמת (30 אחרונות). כל פעולה נכתבת ליומן שאי אפשר למחוק ממנו.</p><div class="io"><b>נכנס</b><span>בקשות שמירה וקריאה משאר הרכיבים</span><b>יוצא</b><span>קבצי <dfn title="קובץ טקסט פשוט לשמירת נתונים מסודרים">JSON</dfn> בתיקיית data (לא ב-Git)</span></div></div>
+    <div class="card comp" data-c="4"><h3><span class="cnum">4</span>קורא PDF</h3><p>מוציא טקסט מהדוח פעמיים, בשתי שיטות (<span class="mono">-table</span> ו-<span class="mono">-simple2</span>, אף פעם לא <span class="mono">-layout</span>, כי בו הסכומים זזים שורה). מתקן עברית ובודק ששתי הקריאות זהות ושהסכומים מתאזנים.</p><div class="io"><b>נכנס</b><span>קובץ PDF אחד</span><b>יוצא</b><span>שורות (שם, מספר כרטיס, סכום), תקופה, הכנסות, רווח, תוצאות הבדיקות</span></div><span class="gl">pdftotext = כלי חינמי שמוציא טקסט מ-PDF, ארוז בתוך תיקיית התוכנה.</span></div>
+    <div class="card comp" data-c="5"><h3><span class="cnum">5</span>מסווג שורות</h3><p>קובע לכל שורת הוצאה איך לטפל בה: מוכר, מוחזר באחוז (רכב, טלפון, קנסות, ביגוד), תרומה, כיבוד, חד-פעמי, הכנסה פסיבית, הוצאה של בעל העסק. שורה לא מוכרת = "ממתין לאישור"; מסווגים פעם אחת והתוכנה זוכרת.</p><div class="io"><b>נכנס</b><span>שורות מהדוח, מפת שורות ידועות, חריגים ללקוח</span><b>יוצא</b><span>שורות מסווגות ורשימת שורות לא מוכרות</span></div></div>
+    <div class="card comp" data-c="6"><h3><span class="cnum">6</span>מסך שולם עד היום</h3><p>בכל סבב מסך אחד לכל הלקוחות, ממולא מראש: מס הכנסה לפי שיטת המקדמה, ביטוח לאומי לפי סכום חודשי כפול חודשים. אתה בודק, מתקן הבדלים (מוצגים כ<dfn title="מקדמה שהיה צריך לשלם ולא שולמה">פיגור</dfn>) ומאשר.</p><div class="io"><b>נכנס</b><span>כרטיסים (שיטת מקדמה וממתי), מחזור מהדוח, התיקונים שלך</span><b>יוצא</b><span>"שולם עד היום" מאושר לכל לקוח, ופיגור אם יש</span></div></div>
+    <div class="card comp" data-c="7"><h3><span class="cnum">7</span>אישור עצמי</h3><p>מחליט אם "תקין" יכול להיות מאושר בלעדיך. מריץ 5 בדיקות ואמצעי ביטחון, ובוחר מדגם לבדיקה שלך בכל סבב. רק "תקין" עם פער מתחת ל-1.5% מאושר לבד.</p><div class="io"><b>נכנס</b><span>תוצאת החישוב, תוצאות קורא ה-PDF, היסטוריית הלקוח, מצב הכרטיס</span><b>יוצא</b><span>"אושר לבד" / "לבדיקה ידנית" / "ממתין לאישור" עם הסבר; רשימת המדגם</span></div></div>
+    <div class="card comp" data-c="8"><h3><span class="cnum">8</span>דשבורד ומסכים</h3><p>כל מה שאתה רואה: דשבורד, כרטיס לקוח עם היסטוריה ופירוט, קליטת דוחות, שולם עד היום, טיוטות (העתקה בלבד), ייצוא, הגדרות, יומן, השוואת סוף שנה.</p><div class="io"><b>נכנס</b><span>לחיצות והקלדות שלך בדפדפן</span><b>יוצא</b><span>מסכים בעברית, קבצי CSV, טקסט להעתקה</span></div><span class="gl">127.0.0.1 = הכתובת של "המחשב הזה בלבד". מחשב אחר לא יכול להתחבר. הפעלה בלחיצה כפולה על start.bat.</span></div>
+    <div class="card comp" data-c="9"><h3><span class="cnum">9</span>גיבוי ואבטחה</h3><p>30 גרסאות לכל קובץ; כפתור "גבה לדיסק חיצוני" לדיסק מוצפן; תזכורת אם עבר יותר מסבב; בדיקת שחזור שנתית; יומן גישה; מסך מחיקה לפי תקופת השמירה; דף "מחשב אבד"; דף נוהל אבטחה.</p><div class="io"><b>נכנס</b><span>תיקיית data</span><b>יוצא</b><span>גרסאות, קובץ גיבוי על דיסק נייד, דוח בדיקת שחזור</span></div><span class="gl">BitLocker To Go = הצפנה של Windows לדיסק נייד. בלי הסיסמה אי אפשר לקרוא אותו.</span></div>
+    <div class="card comp" data-c="10"><h3><span class="cnum">10</span>קליטה שנתית</h3><p>פעם בשנה קולטת את כל הכרטיסים מגיליון אחד שנשמר כ-CSV. כל שורה נבדקת; שגיאה = הקובץ כולו נדחה. כרטיס שנקלט מסומן "לא אושר" עד שאתה מאשר אותו לשנה.</p><div class="io"><b>נכנס</b><span>קובץ CSV בתיקייה data/import</span><b>יוצא</b><span>כרטיסים לשנה</span></div></div>
+  </div>
+  <div class="callout"><b>כללי חיבור:</b> בהפעלה נבדק קובץ הזהב; אם לא תואם, אין אישור עצמי לאף לקוח. מנוע החישוב לא קורא קבצים בעצמו. הדשבורד מדבר עם התוכנה רק דרך API מקומי. כל שמירה עוברת דרך מאגר הנתונים.</div>
+</section>
+
+<!-- 5 -->
+<section id="s5">
+  <h2>5. החישוב</h2>
+  <p>הסדר המלא, לכל לקוח ולכל סבב. כל שיעור נקרא מטבלת השיעורים. חישוב בדיוק מלא, עיגול לשקל רק בתצוגה. נתון חסר = עצירה ו"ממתין לאישור", בלי ניחוש.</p>
+  <div class="card">
+  <ol class="calc">
+    <li><b>רווח לצורך מס בתקופה.</b> מתחילים מ"רווח לתקופה" שבדוח ומחזירים את מה שלא מוכר.
+      <span class="f">רווח לצורך מס = רווח לתקופה + תרומות + 20% מכיבוד קל + 100% מאירוח וארוחות + 55% מהרכב + טלפון (הנמוך מבין 50% מההוצאה או 1,380 לשנה כפול חודשים חלקי 12) + קנסות 100% + ביגוד רגיל 100% (בגדי עבודה 0%, משרד בבית 0%) + מתנות מעל התקרה (ידני) - הכנסה פסיבית</span>
+      <span class="gl">נסיעות לחו"ל: בלי החזרה, מסומן לדוח השנתי. הוצאה של בעל העסק בדוח: לא מוחזרת, "ממתין לאישור". שיעור בכרטיס גובר על ברירת המחדל.</span></li>
+    <li><b>הגדלה לשנה.</b>
+      <span class="f">רווח שנתי = (רווח לצורך מס - פריטים חד-פעמיים) חלקי מספר החודשים כפול 12 + פריטים חד-פעמיים - התאמות סוף שנה צפויות</span>
+      <span class="gl">עסק שנפתח השנה: מגדילים לחודשים מהפתיחה עד דצמבר. עסק שנסגר: בלי הגדלה, תמיד "ממתין לאישור". ההתאמות (פחת, מלאי) מנוכות אחרי ההגדלה, בלי הכפלה.</span></li>
+    <li><b>קרן השתלמות.</b>
+      <span class="f">ניכוי = הנמוך מבין: ההפקדה, 4.5% מההכנסה (עד 293,397), או 13,203</span></li>
+    <li><b>פנסיה - חלק הניכוי וחלק הזיכוי.</b> הכלל נבחר לפי ההפקדה השנתית: מ-26,436 = <dfn title="מי שהפקיד לפנסיה לפחות 16% מהשכר הממוצע">עמית מוטב</dfn>, מתחת = לא עמית מוטב. הלקוח מסומן "לתשומת לב".
+      <span class="f">לא עמית מוטב: ניכוי 7% מההכנסה (עד 164,400), ועוד עד 4% רק על מה שהופקד מעל 12% מההכנסה; הפקדה לזיכוי עד 5% (בסיס מינימלי 2,268)</span>
+      <span class="f">עמית מוטב: מדרגה א - 11% עד 116,400; מדרגה ב (116,400 עד 232,800) - 7% ועוד עד 4% מעל 12%, בלי ההפקדה שיצרה את המעמד; מקסימום ניכוי 25,608; זיכוי על 5% עד 232,800, ועוד 0.5% רק אם לא נוכה ביטוח אובדן כושר עבודה</span>
+      <span class="gl">משכורת עם פנסיה ממעסיק, או גיל 50 ומעלה: שני שדות ידניים "ניכוי פנסיה" ו"סכום לזיכוי". ה-0.5% למי שאינו עמית מוטב: לא מחושב עד שיאומת.</span></li>
+    <li><b>בסיס ביטוח לאומי.</b> מורידים רק 52% מהביטוח הלאומי עצמו וניכוי פנסיה של מי שאינו עמית מוטב. קרן השתלמות וניכוי עמית מוטב לא מורידים (לפי החוק; מתג בהגדרות).
+      <span class="f">בסיס = הכנסה - 52% x ביטוח לאומי על הבסיס. כי הבסיס תלוי בעצמו, פותרים בנוסחה סגורה: בסיס = (הכנסה + רצועה מופחתת x 0.52 x (12.83% - 4.47%)) חלקי (1 + 0.52 x 12.83%)</span>
+      <span class="gl">"נוסחה סגורה" = נוסחה שנותנת את התוצאה המדויקת ישר, בלי ניסוי וטעייה. משכורת מנצלת קודם את המדרגה המופחתת והתקרה.</span></li>
+    <li><b>ביטוח לאומי ומס בריאות.</b>
+      <span class="f">עד 7,703 לחודש: ביטוח לאומי 4.47%, בריאות 3.23%. מ-7,703 עד 51,910: 12.83% ו-5.17%. מעל: אין. מינימום הכנסה 3,442 לחודש.</span>
+      <span class="gl">גיל פרישה או מעמד חריג: מקלידים ביטוח לאומי ומס בריאות (שני שדות), התוכנה לא מחשבת.</span></li>
+    <li><b>הכנסה חייבת.</b>
+      <span class="f">הכנסה חייבת = בסיס + משכורת שנתית - ניכוי נוסף ידני</span>
+      <span class="gl">ניכוי נוסף ידני מוריד רק מס הכנסה, לא את בסיס הביטוח הלאומי.</span></li>
+    <li><b>מס לפני זיכויים.</b>
+      <span class="f">6 מדרגות (10%, 14%, 20%, 31%, 35%, 47%) + מס יסף 3% על מה שמעל 721,560</span></li>
+    <li><b>זיכויים</b> (לא יורדים מתחת לאפס).
+      <span class="f">נקודות זיכוי x 2,904 + 35% מהפקדה לזיכוי בפנסיה + 35% מהתרומות בפועל מתחילת השנה (מינימום 207, עד 30% מההכנסה החייבת, בלי הגדלה לשנה) + זיכוי נוסף ידני</span>
+      <span class="gl">מספר הנקודות מקלידים בכרטיס. בלי מספר: החישוב נעצר.</span></li>
+    <li><b>תשלומים</b> (יכולים ליצור החזר).
+      <span class="f">מס נדרש = מס אחרי זיכויים - מס שנוכה מהמשכורת - ניכוי במקור מהעסק עד היום (רק אצל מי שמסומן)</span></li>
+    <li><b>מקדמה צפויה לשנה.</b>
+      <span class="f">צפוי = שולם עד היום (מאושר) + המקדמות שעוד ישולמו עד דצמבר לפי השיטה בכרטיס + תשלומים חד-פעמיים</span>
+      <span class="gl">שיטות: אחוז מהמחזור (לפי מחזור חודשי ממוצע), סכום חודשי קבוע, או 0. חוב משנה קודמת לא נספר.</span></li>
+    <li><b>פער ותוצאה</b>, בנפרד למס הכנסה ולביטוח לאומי.
+      <span class="f">פער % = (נדרש - צפוי) חלקי המס השנתי המלא (לפני קיזוז ניכוי במקור ומס המשכורת) x 100</span>
+      <span class="gl">עד 2% (כולל 2.0% בדיוק) = תקין. מעל = לא תקין, עם "חסר" (פער חיובי) או "ביתר" (שלילי). אם אחד מהשניים לא תקין, הלקוח לא תקין.</span></li>
+  </ol>
+  </div>
+
+  <h3>דוגמה מאומתת: רווח שנתי 240,000</h3>
+  <p class="note">עצמאי, 2.25 נקודות זיכוי, בלי משכורת, בלי פנסיה ובלי קרן השתלמות, 12 חודשים. אומתה בשתי בדיקות ונשמרת כטסט.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>שלב</th><th>חישוב</th><th class="n">תוצאה</th></tr></thead>
+    <tbody>
+      <tr><td>רצועה מופחתת לשנה</td><td>7,703 x 12</td><td class="n">92,436</td></tr>
+      <tr><td>תקרה לשנה</td><td>51,910 x 12</td><td class="n">622,920</td></tr>
+      <tr><td>מונה</td><td>240,000 + 92,436 x 0.52 x (0.1283 - 0.0447)</td><td class="n">244,018.38</td></tr>
+      <tr><td>מכנה</td><td>1 + 0.52 x 0.1283</td><td class="n">1.066716</td></tr>
+      <tr class="total"><td>בסיס</td><td>244,018.38 חלקי 1.066716 (228,756.65)</td><td class="n">228,757</td></tr>
+      <tr class="total"><td>ביטוח לאומי</td><td>92,436 x 4.47% + 136,320.65 x 12.83%</td><td class="n">21,622</td></tr>
+      <tr class="total"><td>מס בריאות</td><td>92,436 x 3.23% + 136,320.65 x 5.17%</td><td class="n">10,033</td></tr>
+      <tr><td>בדיקה</td><td>240,000 - 0.52 x 21,621.83 = 228,756.65 = הבסיס</td><td class="n">תואם</td></tr>
+      <tr><td>מס לפני זיכויים</td><td>8,412 + 5,124 + 21,456 + 756.65 x 31% (234.56)</td><td class="n">35,227</td></tr>
+      <tr><td>נקודות זיכוי</td><td>2.25 x 2,904</td><td class="n">6,534</td></tr>
+      <tr class="total"><td>מס הכנסה</td><td>35,226.56 - 6,534</td><td class="n">28,693</td></tr>
+    </tbody>
+  </table></div>
+  <h3>המשך הדוגמה: השוואה (מספרים מומצאים)</h3>
+  <p class="note">תקופה 1-10/2026, רווח לתקופה 200,000 (200,000 חלקי 10 כפול 12 = 240,000). מקדמת מס הכנסה קבועה 2,300 לחודש, ביטוח לאומי 2,600 לחודש, ושולם עד היום בדיוק לפי זה.</p>
+  <div class="tbl"><table>
+    <thead><tr><th></th><th class="n">מס הכנסה</th><th class="n">ביטוח לאומי ובריאות</th></tr></thead>
+    <tbody>
+      <tr><td>נדרש</td><td class="n">28,692.56</td><td class="n">31,655.29</td></tr>
+      <tr><td>צפוי</td><td class="n">23,000 + 2 x 2,300 = 27,600</td><td class="n">26,000 + 2 x 2,600 = 31,200</td></tr>
+      <tr><td>פער</td><td class="n">1,092.56 = 3.81%</td><td class="n">455.29 = 1.44%</td></tr>
+      <tr><td>תוצאה</td><td><span class="badge b-bad">לא תקין - חסר</span></td><td><span class="badge b-ok">תקין</span></td></tr>
+    </tbody>
+  </table></div>
+  <p>תוצאה כוללת: <span class="badge b-bad">לא תקין - חסר</span>, לבדיקה ידנית, טיוטת הודעה למס הכנסה.</p>
+</section>
+
+<!-- 6 -->
+<section id="s6">
+  <h2>6. כרטיס לקוח ונתונים</h2>
+  <p>לכל לקוח כרטיס שנתי, מתעדכן בתחילת כל שנה. החישוב מותאם לכל לקוח לגופו. בכל מקום מופיע רק קוד הלקוח.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>קבוצה</th><th>שדות</th><th>הערה</th></tr></thead>
+    <tbody>
+      <tr><td>זיהוי</td><td>קוד (למשל 001), שם העסק כמו בדוח, פעיל / לא פעיל</td><td>שם העסק רק לבדיקה שהדוח שייך ללקוח</td></tr>
+      <tr><td>אישי</td><td>תאריך לידה, מצב משפחתי, ילדים (שנות לידה), הערות</td><td>תאריך לידה לסימון גיל 50+ וגיל פרישה</td></tr>
+      <tr><td>מידע בלבד</td><td>תואר, עולה חדש, חייל משוחרר, נכות</td><td>מסבירים את מספר הנקודות, לא נכנסים לחישוב</td></tr>
+      <tr><td>נקודות זיכוי</td><td>מספר סופי שאתה מקליד</td><td>חסר = עצירה, "ממתין לאישור"</td></tr>
+      <tr><td>פנסיה</td><td>הפקדה שנתית (כולל מעסיק); ביטוח אובדן כושר ששולם או "אין"; שדות ידניים "ניכוי פנסיה" ו"סכום לזיכוי"</td><td>שדות ידניים חובה למשכורת עם פנסיה ממעסיק ולבן 50+</td></tr>
+      <tr><td>קרן השתלמות</td><td>הפקדה שנתית; משכורת קובעת אם יש קרן ממעסיק</td><td></td></tr>
+      <tr><td>משכורת</td><td>משכורת שנתית, מס שנוכה ממנה, יש פנסיה ממעסיק</td><td>לפי תלוש אחרון כפול 12 או חוזה</td></tr>
+      <tr><td>ניכוי במקור</td><td>כן / לא</td><td>אם כן: הסכום מהספרים בכל סבב</td></tr>
+      <tr><td>מקדמת מס הכנסה</td><td>שיטה (אחוז מהמחזור / סכום חודשי / 0), ערך, מאיזה תאריך</td><td>כל שינוי נשמר עם תאריך</td></tr>
+      <tr><td>מקדמת ביטוח לאומי</td><td>סכום חודשי ומאיזה חודש</td><td>כל שינוי נשמר עם תאריך</td></tr>
+      <tr><td>תשלומים</td><td>תשלומים חד-פעמיים (תאריך, סכום, מס הכנסה / ב"ל); תשלומי חוב משנה קודמת</td><td>חוב קודם לא נספר כמקדמה</td></tr>
+      <tr><td>החזרות לרווח</td><td>שינוי שיעורי ברירת מחדל (רכב 55%, טלפון)</td><td></td></tr>
+      <tr><td>כיבודים</td><td>הכל כיבוד קל / הכל אירוח / אחוז קבוע / לא הוגדר</td><td>לא הוגדר = שואלים</td></tr>
+      <tr><td>רשות</td><td>התאמות סוף שנה צפויות (שנתי); מחזור לפי מע"מ</td><td>פער מחזור מעל 5% = ממתין</td></tr>
+      <tr><td>עסק</td><td>חודש פתיחה, נסגר השנה</td><td></td></tr>
+      <tr><td>ביטוח לאומי ידני</td><td>ביטוח לאומי, מס בריאות (שנתי)</td><td>גיל פרישה / מעמד חריג</td></tr>
+      <tr><td>ידני כללי</td><td>זיכוי נוסף בש"ח, ניכוי נוסף בש"ח</td><td>ניכוי נוסף מוריד רק מס הכנסה</td></tr>
+      <tr><td>סימונים</td><td>מצבים מיוחדים, "טיפול ידני" (עם סיבה), "לא לבדוק" (סיבה חובה)</td><td>אין אישור עצמי</td></tr>
+      <tr><td>השוואה</td><td>רווח סופי של השנה הקודמת</td><td>לבדיקת קפיצה</td></tr>
+      <tr><td>חריגי שורות</td><td>טיפול מיוחד לשורה אצל הלקוח הזה</td><td></td></tr>
+      <tr><td>אישור ומעקב</td><td>אושר לשנה, מספר סבבים ידניים שבוצעו, היסטוריית שינויים, עדכון אחרון</td><td>שינוי מהותי מאפס את הסבבים הידניים</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>הקבצים שיישמרו</h3>
+  <p class="note">הכל בתיקייה C:\github\mikdamot-app\data, במחשב שבו עובדים. לא ב-Git, לא בענן. קבצי JSON פשוטים, בלי מסד נתונים.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>קובץ</th><th>מה יש בו</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">data/clients/&lt;קוד&gt;/&lt;שנה&gt;.json</td><td>כרטיס לקוח לשנה</td></tr>
+      <tr><td class="mono">data/rounds/&lt;שנה&gt;-&lt;חודש&gt;/round.json</td><td>נתוני הסבב: פתיחה, שיעורים מקובעים, מסך שולם עד היום, מדגם</td></tr>
+      <tr><td class="mono">data/rounds/&lt;שנה&gt;-&lt;חודש&gt;/&lt;קוד&gt;.json</td><td>בדיקת לקוח בסבב: מה נקרא, תיקונים, חישוב, פירוט, תוצאה, אישור, מעקב, טיוטה</td></tr>
+      <tr><td class="mono">data/reports/&lt;שנה&gt;-&lt;חודש&gt;/&lt;קוד&gt;.pdf</td><td>עותק הדוח, בשם קוד ותקופה בלבד</td></tr>
+      <tr><td class="mono">data/settings.json</td><td>ההגדרות שלך: שינויים בשיעורים, ספים, חתימה, תאריכי גיבוי</td></tr>
+      <tr><td class="mono">data/line_map.json</td><td>סיווג שורות שנלמד</td></tr>
+      <tr><td class="mono">data/yearend/&lt;שנה&gt;.json</td><td>מס סופי ותאריך הגשה לכל לקוח, וסטיות</td></tr>
+      <tr><td class="mono">data/log/audit-&lt;שנה&gt;.jsonl</td><td>יומן: כל רשומה כוללת את טביעת האצבע של הקודמת, כך ששינוי או מחיקה מתגלים</td></tr>
+      <tr><td class="mono">data/versions/...</td><td>30 גרסאות אחרונות לכל קובץ</td></tr>
+      <tr><td class="mono">data/import/</td><td>קובצי CSV לקליטה שנתית</td></tr>
+      <tr><td class="mono">data/exports/</td><td>ייצוא CSV</td></tr>
+    </tbody>
+  </table></div>
+  <span class="gl">&lt;חודש&gt; = החודש האחרון בתקופה. למשל rounds/2026-10 = תקופה 1-10/2026.</span>
+
+  <h3>שמירה ומחיקה</h3>
+  <ul class="clean">
+    <li>שומרים 7 שנים מסוף שנת המס, או 6 שנים מהגשת הדוח, לפי המאוחר. אחר כך מסך מחיקה, והמחיקה רק באישורך.</li>
+    <li>בלי תאריך הגשה: לא מוצע למחיקה.</li>
+    <li>בדיקה לא נמחקת: תיקון מסמן אותה "בוטל" והגרסה הישנה נשמרת.</li>
+    <li>שנה שנסגרה: קריאה בלבד.</li>
+    <li>לא נשמרים: שדות רגישים שלא משמשים לחישוב, ושם הלקוח מחוץ לשדה שם העסק.</li>
+  </ul>
+</section>
+
+<!-- 7 -->
+<section id="s7">
+  <h2>7. סטטוסים ואישור עצמי</h2>
+  <div class="grid g3">
+    <div class="card"><span class="badge b-ok">תקין</span><p>הפער במס הכנסה וגם בביטוח לאומי 2% או פחות (2.0% בדיוק = תקין). אין הודעה. מאושר לבד רק מתחת ל-1.5% וכשכל התנאים מתקיימים.</p></div>
+    <div class="card"><span class="badge b-bad">לא תקין - חסר / ביתר</span><p>לפחות אחד מעל 2%. "חסר" = המקדמות נמוכות מהמס: טיוטת הודעה, תמיד עובר אצלך. "ביתר" = גבוהות מהמס: בסוף הרשימה, טיוטה רק בלחיצה. חסר באחד וביתר בשני = התווית "חסר".</p></div>
+    <div class="card"><span class="badge b-wait">ממתין לאישור</span><p>בדיקה עצמית נכשלה, חסר נתון, או מצב שדורש עין אנושית. תמיד עם הסבר. 4 פעולות: לאשר, לתקן סכומים, לשנות תוצאה (סיבה חובה), לדחות לסבב הבא.</p></div>
+  </div>
+  <p class="note">במונים יש גם "לא נבדק בסבב הזה" (לקוח פעיל בלי בדיקה), ומונה נפרד ל"לא לבדוק".</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h3 style="margin-top:0">מצב האישור</h3>
+      <ul class="clean">
+        <li><b>אושר לבד</b> - תקין, מתחת ל-1.5% בשני המסים, כל הבדיקות עברו.</li>
+        <li><b>לבדיקה ידנית</b> - כל לא תקין, תקין שלא עומד בתנאים, ומי שנבחר למדגם.</li>
+        <li><b>אושר על ידך</b> - אישרת או שינית (שינוי תוצאה דורש סיבה). אישור של "לא תקין" פוקע בסוף הסבב.</li>
+        <li><b>נדחה לסבב הבא</b>, <b>בוטל</b> (הגרסה הישנה נשמרת).</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">מעקב הודעה</h3>
+      <p>טיוטה, נשלחה (תאריך וערוץ), הלקוח שילם (סכום ותאריך), סגור, או בלי פעולה (עם סיבה). מס הכנסה וביטוח לאומי במעקב נפרד. "לא תקין" שלא זז 14 יום עובר ל"דורש מעקב".</p>
+      <h3>סימונים בכרטיס</h3>
+      <p>טיפול ידני, לא לבדוק, לא אושר לשנה, לתשומת לב, יש הכנסה שלא נכללה, פיגור.</p>
+    </div>
+  </div>
+
+  <h3>5 הבדיקות העצמיות</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>#</th><th>בודק ש...</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>סכום השורות שווה לשורות הסה"כ ול"רווח לתקופה"</td></tr>
+      <tr><td>2</td><td>שתי הקריאות (<span class="mono">-table</span> ו-<span class="mono">-simple2</span>) נותנות אותם סכומים</td></tr>
+      <tr><td>3</td><td>התקופה מתחילה בינואר (או בחודש הפתיחה), בשנה הנוכחית, ולפחות באורך הבדיקה הקודמת</td></tr>
+      <tr><td>4</td><td>אין קפיצה של יותר מ-50% ברווח השנתי מול הבדיקה הקודמת (או השנה הקודמת). מתעלמים מקפיצה קטנה מ-20,000. רווח קודם אפס או שלילי = נכשל</td></tr>
+      <tr><td>5</td><td>אין שורה לא מוכרת, אין שורה חדשה, אין כיבודים בלי הגדרה, אין ארוחות עובדים בלי תשובה</td></tr>
+    </tbody>
+  </table></div>
+  <p>כשל באחת = "ממתין לאישור" עם הסבר.</p>
+
+  <h3>אמצעי ביטחון (כולם חייבים להתקיים כדי לאשר לבד)</h3>
+  <div class="grid g2">
+    <div class="card"><ul class="clean">
+      <li>שני הסבבים הראשונים של כל לקוח ידניים, ושוב 2 ידניים אחרי שינוי מהותי (שיטת מקדמה, סוג הכנסה חדש, דוח במבנה חדש, שנה חדשה).</li>
+      <li>רק "תקין" עם פער מתחת ל-1.5% בשני המסים. פער בין 1.5% ל-2% לא מאושר לבד.</li>
+      <li>הכרטיס אושר לשנה הנוכחית, מלא, ולא "טיפול ידני" או "לא לבדוק".</li>
+      <li>הספרים מעודכנים עד סוף התקופה, ומסך שולם עד היום אושר.</li>
+    </ul></div>
+    <div class="card"><ul class="clean">
+      <li>הדוח נקרא מ-PDF (הקלדה ידנית לעולם לא מאושרת לבד).</li>
+      <li>קובץ הזהב עבר, שרשרת היומן תקינה, שיעורים של השנה הנוכחית ומקדמת ביטוח לאומי לשנה הוזנה.</li>
+      <li>המדגם של הסבב הקודם נבדק; העסק לא נסגר; אין עצירה בחישוב.</li>
+      <li>אם מולא מחזור לפי מע"מ: ההפרש מול ההכנסות בדוח עד 5%.</li>
+    </ul></div>
+  </div>
+  <div class="callout"><b>מדגם בכל סבב:</b> 3 לקוחות אקראיים מבין אלה שאושרו לבד, ועוד 2: המס הגדול ביותר והשינוי הגדול ביותר. אם אושרו לבד פחות מ-3, כולם עוברים אצלך. אם המדגם לא נבדק, האישור העצמי נעצר בסבב הבא. בסוף שנה: השוואת ההערכה האחרונה למס הסופי, מוצגות רק סטיות מעל 2%.</div>
+</section>
+
+<!-- 8 -->
+<section id="s8">
+  <h2>8. מסכים</h2>
+  <p>הדגמה בלבד, עם נתונים מומצאים וקודי לקוח 001-005. המסכים האמיתיים ייבנו בשלבים 2-5 ויוצגו בדפדפן.</p>
+
+  <div class="mock" aria-label="הדגמת דשבורד">
+    <div class="bar"><span class="dots"><i></i><i></i><i></i></span>דשבורד - סבב 1-10/2026</div>
+    <div class="body">
+      <div class="banner">הסבב פתוח: תקופה 1-10/2026 (מ-25.11)</div>
+      <div class="mini-kpi">
+        <div><b>2</b>תקין</div><div><b>2</b>לא תקין</div><div><b>1</b>ממתין לאישור</div><div><b>0</b>לא נבדק בסבב</div><div><b>0</b>לא לבדוק</div>
+      </div>
+      <div class="toolbar"><span class="input-mock">חיפוש לפי קוד</span><span class="input-mock">סינון: כל המצבים</span><span class="btn">ייצוא CSV</span></div>
+      <div class="tbl"><table>
+        <thead><tr><th>קוד</th><th>תקופה</th><th class="n">פער מס הכנסה</th><th class="n">פער ב"ל</th><th>מצב</th><th>מעקב</th><th>ספרים עד</th><th>אישור</th></tr></thead>
+        <tbody>
+          <tr><td>003</td><td>1-10/2026</td><td class="n">-</td><td class="n">-</td><td><span class="badge b-wait">ממתין לאישור</span><span class="gl">שורה לא מוכרת בדוח</span></td><td></td><td>10</td><td>ידני</td></tr>
+          <tr><td>001</td><td>1-10/2026</td><td class="n">1,093 | 3.81%</td><td class="n">455 | 1.44%</td><td><span class="badge b-bad">לא תקין - חסר</span></td><td>טיוטה</td><td>10</td><td>ידני</td></tr>
+          <tr><td>005</td><td>1-10/2026</td><td class="n">-2,410 | -6.20%</td><td class="n">120 | 0.40%</td><td><span class="badge b-bad">לא תקין - ביתר</span></td><td></td><td>10</td><td>ידני</td></tr>
+          <tr><td>004</td><td>1-10/2026</td><td class="n">-540 | -1.70%</td><td class="n">80 | 0.30%</td><td><span class="badge b-ok">תקין</span></td><td></td><td>10</td><td>ידני (מעל 1.5%)</td></tr>
+          <tr><td>002</td><td>1-10/2026</td><td class="n">310 | 0.80%</td><td class="n">-95 | -0.30%</td><td><span class="badge b-ok">תקין</span></td><td></td><td>10</td><td>אושר לבד</td></tr>
+        </tbody>
+      </table></div>
+      <span class="gl">המונים מסתכמים במספר הלקוחות הפעילים (5). מיון: ממתין, דורש מעקב, חסר, ביתר, תקין.</span>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <div class="mock" aria-label="הדגמת כרטיס לקוח">
+      <div class="bar"><span class="dots"><i></i><i></i><i></i></span>כרטיס לקוח 001 - 2026</div>
+      <div class="body">
+        <div class="field"><span>נקודות זיכוי</span><span>2.25</span></div>
+        <div class="field"><span>מקדמת מס הכנסה</span><span>סכום קבוע 2,300 לחודש, מ-01/2026</span></div>
+        <div class="field"><span>מקדמת ביטוח לאומי</span><span>2,600 לחודש, מ-01/2026</span></div>
+        <div class="field"><span>פנסיה / קרן השתלמות</span><span>אין / אין</span></div>
+        <div class="field"><span>משכורת / ניכוי במקור</span><span>אין / לא</span></div>
+        <div class="field"><span>כיבודים</span><span>הכל כיבוד קל</span></div>
+        <div class="field"><span>אושר לשנה</span><span>2026</span></div>
+        <h3>פירוט הבדיקה האחרונה</h3>
+        <div class="field"><span>רווח לתקופה 1-10</span><span>200,000</span></div>
+        <div class="field"><span>רווח שנתי</span><span>240,000</span></div>
+        <div class="field"><span>בסיס ב"ל / מס</span><span>228,757</span></div>
+        <div class="field"><span>מס הכנסה נדרש</span><span>28,693</span></div>
+        <div class="field"><span>צפוי לשלם</span><span>27,600</span></div>
+        <p style="margin-top:10px"><span class="btn p">אני מאשר את הכרטיס לשנה 2026</span> <span class="btn">היסטוריית שינויים</span></p>
+      </div>
+    </div>
+    <div class="mock" aria-label="הדגמת טיוטת הודעה">
+      <div class="bar"><span class="dots"><i></i><i></i><i></i></span>טיוטת הודעה - 001</div>
+      <div class="body">
+        <textarea readonly aria-label="טקסט הטיוטה">לקוח 001 | תקופה 1-10/2026
+
+מס הכנסה: לפי הבדיקה צפוי חוסר של כ-1,093 ש"ח בסוף השנה, אחרי המקדמות שעוד ישולמו.
+מומלץ תשלום חד-פעמי בסכום זה.
+
+זו הערכה לפי הספרים עד חודש 10. המס הסופי ייקבע בדוח השנתי.
+
+[חתימה]</textarea>
+        <p style="margin-top:10px"><span class="btn p">העתק</span> <span class="btn">סמן "נשלחה"</span></p>
+        <span class="gl">אין כפתור שליחה. עד 1-6: להעלות אחוז. 1-7 עד 1-11: תשלום חד-פעמי. 1-12: לשלם את היתרה.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="mock" aria-label="הדגמת מסך שולם עד היום">
+    <div class="bar"><span class="dots"><i></i><i></i><i></i></span>שולם עד היום - סבב 1-10/2026</div>
+    <div class="body">
+      <div class="tbl"><table>
+        <thead><tr><th>קוד</th><th>שיטה</th><th class="n">מ"ה ממולא</th><th class="n">מ"ה בפועל</th><th class="n">פיגור מ"ה</th><th class="n">ב"ל ממולא</th><th class="n">ב"ל בפועל</th><th class="n">פיגור ב"ל</th><th class="n">ניכוי במקור</th></tr></thead>
+        <tbody>
+          <tr><td>001</td><td>קבוע 2,300</td><td class="n">23,000</td><td class="n">23,000</td><td class="n">0</td><td class="n">26,000</td><td class="n">26,000</td><td class="n">0</td><td class="n">-</td></tr>
+          <tr><td>002</td><td>5% מהמחזור</td><td class="n">18,500</td><td class="n">18,500</td><td class="n">0</td><td class="n">14,000</td><td class="n">14,000</td><td class="n">0</td><td class="n">-</td></tr>
+          <tr><td>003</td><td>קבוע 1,500</td><td class="n">15,000</td><td class="n">15,000</td><td class="n">0</td><td class="n">9,000</td><td class="n">9,000</td><td class="n">0</td><td class="n">3,200</td></tr>
+          <tr><td>004</td><td>קבוע 2,000</td><td class="n">20,000</td><td class="n">18,000</td><td class="n"><span class="badge b-bad">2,000</span></td><td class="n">12,000</td><td class="n">12,000</td><td class="n">0</td><td class="n">-</td></tr>
+          <tr><td>005</td><td>0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">7,000</td><td class="n">7,000</td><td class="n">0</td><td class="n">-</td></tr>
+        </tbody>
+      </table></div>
+      <p><span class="btn p">אישרתי מול מערכת המייצגים</span></p>
+      <span class="gl">מ"ה = מס הכנסה, ב"ל = ביטוח לאומי. מתקנים רק הבדלים. מסך שלא אושר = כל הלקוחות "ממתין לאישור".</span>
+    </div>
+  </div>
+
+  <div class="mock" aria-label="הדגמת מסך הגדרות">
+    <div class="bar"><span class="dots"><i></i><i></i><i></i></span>הגדרות</div>
+    <div class="body grid g2" style="gap:6px 24px">
+      <div>
+        <div class="field"><span>שנת שיעורים</span><span>2026 (מאומת)</span></div>
+        <div class="field"><span>סף תקין</span><span>2.0%</span></div>
+        <div class="field"><span>אישור לבד מתחת ל-</span><span>1.5%</span></div>
+        <div class="field"><span>סבבים ידניים</span><span>2</span></div>
+        <div class="field"><span>קפיצה ברווח / רצפה</span><span>50% / 20,000</span></div>
+        <div class="field"><span>מדגם אקראי</span><span>3</span></div>
+      </div>
+      <div>
+        <div class="field"><span>יום פתיחת סבב</span><span>25</span></div>
+        <div class="field"><span>פער מחזור מול מע"מ</span><span>5%</span></div>
+        <div class="field"><span>סטייה גדולה בסוף שנה</span><span>2%</span></div>
+        <div class="field"><span>סדר פנסיה</span><span>הנוסחה הרשמית</span></div>
+        <div class="field"><span>בסיס ב"ל: קרן השתלמות / עמית מוטב</span><span>כבוי / כבוי</span></div>
+        <div class="field"><span>חתימה</span><span>(ריק - "[חתימה]")</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="note">מסכים נוספים: פירוט בדיקה, הזנה ידנית, קליטת דוחות, סיווג שורות, ממתינים לאישור, מדגם, קליטה שנתית ומעבר שנה, גיבוי ושחזור, יומן, מחיקה לפי תקופת שמירה, השוואת סוף שנה, דפי עזרה.</p>
+</section>
+
+<!-- 9 -->
+<section id="s9">
+  <h2>9. שיעורים וכללים (2026)</h2>
+  <div class="callout warn">שיעורים, תקרות ומועדים משתנים, לפעמים גם באמצע שנה. לפני שמסתמכים על מספר, בודקים ב-gov.il וב-btl.gov.il. המקור המחייב הוא rates/2026.json; כל ערך ניתן לשינוי במסך ההגדרות.</div>
+  <p class="note"><span class="badge b-ok">2 בדיקות</span> מקור רשמי ומקור מקצועי הסכימו. <span class="badge b-wait">מקור אחד</span> נמצא במקור אחד; מחושב רק אם אישרת. <span class="badge b-plain">ידני</span> התוכנה לא מחשבת, מקלידים. <span class="badge b-acc">החלטה שלך</span> כלל עבודה שקבעת.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>נושא</th><th>ערך ב-2026</th><th>אימות</th></tr></thead>
+    <tbody>
+      <tr><td>מדרגות מס הכנסה (שנתי)</td><td>10% עד 84,120; 14% עד 120,720; 20% עד 228,000; 31% עד 301,200; 35% עד 560,280; 47% מעל</td><td><span class="badge b-ok">2 בדיקות</span></td></tr>
+      <tr><td>מס יסף</td><td>3% מעל 721,560 (2% נוסף על הון - לא בשימוש)</td><td><span class="badge b-ok">2 בדיקות</span></td></tr>
+      <tr><td>נקודת זיכוי</td><td>2,904 לשנה (242 לחודש); מספר הנקודות מוקלד</td><td><span class="badge b-ok">2 בדיקות</span> <span class="badge b-plain">מספר ידני</span></td></tr>
+      <tr><td>ביטוח לאומי ובריאות (חודשי)</td><td>עד 7,703: 4.47% + 3.23%; עד 51,910: 12.83% + 5.17%</td><td><span class="badge b-ok">2 בדיקות</span></td></tr>
+      <tr><td>הכנסה מינימלית</td><td>3,442 לחודש</td><td><span class="badge b-wait">מקור אחד</span> חוזר רשמי; עם משכורת - מחושב ומסומן</td></tr>
+      <tr><td>בסיס ביטוח לאומי</td><td>מורידים 52% מהביטוח הלאומי וניכוי פנסיה של לא עמית מוטב; נוסחה סגורה; אותו בסיס למס הכנסה</td><td><span class="badge b-ok">2 בדיקות</span></td></tr>
+      <tr><td>פנסיה - לא עמית מוטב</td><td>ניכוי 7% + עד 4% מעל 12%; זיכוי 35% על 5% (מינימום 2,268); תקרה 164,400</td><td><span class="badge b-ok">2 בדיקות</span></td></tr>
+      <tr><td>פנסיה - עמית מוטב</td><td>מהפקדה 26,436; 11% עד 116,400; 7% + 4% עד 232,800; מקסימום ניכוי 25,608; הפקדה לזיכוי עד 12,804; תוספת 0.5%</td><td><span class="badge b-ok">2 בדיקות</span></td></tr>
+      <tr><td>תוספת 0.5% ללא עמית מוטב</td><td>לא מחושבת עד שתאומת</td><td><span class="badge b-plain">לא מחושב</span></td></tr>
+      <tr><td>פנסיה בן 50 ומעלה</td><td>10.5% + 6%</td><td><span class="badge b-wait">מקור אחד</span> <span class="badge b-plain">ידני</span></td></tr>
+      <tr><td>פנסיה עם משכורת ופנסיה ממעסיק</td><td>שדות ידניים</td><td><span class="badge b-plain">ידני</span></td></tr>
+      <tr><td>קרן השתלמות</td><td>4.5% עד 293,397 (עד 13,203); הפקדה מוטבת עד 20,566</td><td><span class="badge b-ok">2 בדיקות</span></td></tr>
+      <tr><td>משכורת ועסק</td><td>מדרגות משותפות, נקודות פעם אחת, מס שנוכה מקוזז</td><td><span class="badge b-ok">2 בדיקות</span></td></tr>
+      <tr><td>משכורת ראשונה בתקרה המשותפת (ב"ל)</td><td>המשכורת מנצלת קודם את המדרגה המופחתת</td><td><span class="badge b-wait">מקור אחד</span> אושר לעבודה, לקוח מסומן</td></tr>
+      <tr><td>תרומות</td><td>זיכוי 35%; מינימום 207; עד 30% מההכנסה החייבת; עודף ל-3 שנים (לא בגרסה 1); רק "תרומות ישראל"</td><td><span class="badge b-ok">2 בדיקות</span></td></tr>
+      <tr><td>כיבודים ומתנות</td><td>כיבוד קל 80% מוכר; אירוח 0%; ארוחות עובדים - לשאול; מתנות עד 240 לאדם (ידני)</td><td><span class="badge b-ok">2 בדיקות</span></td></tr>
+      <tr><td>רכב פרטי</td><td>55% חוזרים לרווח</td><td><span class="badge b-ok">2 בדיקות</span> <span class="badge b-acc">החלטה שלך</span></td></tr>
+      <tr><td>טלפון נייד</td><td>הנמוך מבין 50% או 1,380 לשנה</td><td><span class="badge b-wait">מקור אחד</span> נוסח התקנות, אושר לעבודה</td></tr>
+      <tr><td>קנסות, ביגוד, משרד בבית, חו"ל</td><td>100%; 100% (עבודה 0%); 0%; לא אוטומטי</td><td><span class="badge b-acc">ברירת מחדל</span></td></tr>
+      <tr><td>הוצאות בעל העסק</td><td>לא נרשמות כהוצאה; שורה כזו = לא מוכרת</td><td><span class="badge b-acc">החלטה שלך</span></td></tr>
+      <tr><td>סף</td><td>2% בלבד, בלי רצפה בשקלים (0 / 0)</td><td><span class="badge b-acc">החלטה שלך</span></td></tr>
+      <tr><td>מכנה הפער</td><td>המס השנתי המלא לפני קיזוז ניכוי במקור ומס משכורת</td><td><span class="badge b-acc">החלטה שלך</span></td></tr>
+      <tr><td>סטייה גדולה בסוף שנה</td><td>2%</td><td><span class="badge b-acc">החלטה שלך</span></td></tr>
+      <tr><td>שמירת מסמכים</td><td>7 שנים מסוף שנת המס או 6 מהגשה, המאוחר</td><td><span class="badge b-ok">2 בדיקות</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- 10 -->
+<section id="s10">
+  <h2>10. החלטות</h2>
+  <p>כלל קבוע: <b>החלטה מאוחרת גוברת</b>. כל החלטה מקצועית (חישוב, ספים, מה מוכר) מתקבלת רק על ידך.</p>
+  <div class="filters" id="dfilter" role="group" aria-label="סינון החלטות">
+    <button type="button" data-f="all" class="on">הכל</button>
+    <button type="button" data-f="valid">בתוקף</button>
+    <button type="button" data-f="replaced">הוחלפה / בוטלה</button>
+  </div>
+  <div class="tbl"><table id="decisions">
+    <thead><tr><th>תאריך</th><th>החלטה</th><th>מצב</th></tr></thead>
+    <tbody>
+      <tr data-s="replaced"><td>15.11</td><td>סף 1%, "תקין / גבולי / פער גדול"</td><td><span class="badge b-plain">הוחלפה 15.11</span></td></tr>
+      <tr data-s="valid"><td>15.11</td><td>שתי תוצאות: תקין (עד 2%) / לא תקין, לכל הלקוחות</td><td><span class="badge b-ok">בתוקף</span> נוסף "ממתין" ותווית חסר/ביתר</td></tr>
+      <tr data-s="replaced"><td>15.11</td><td>נתונים מוקלדים ידנית מאתר מס הכנסה</td><td><span class="badge b-plain">הוחלפה</span> PDF מריווחית</td></tr>
+      <tr data-s="replaced"><td>15.11</td><td>גם עצמאים וגם חברות</td><td><span class="badge b-plain">הוחלפה 21.11</span> רק עצמאים</td></tr>
+      <tr data-s="valid"><td>15.11</td><td>רווח מצטבר מוגדל לשנה (רווח חלקי חודשים כפול 12)</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>15.11</td><td>כרטיס אישי לכל לקוח, חישוב לגופו</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>15.11</td><td>נקודות זיכוי מוקלדות, לא מחושבות</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>15.11</td><td>מס הכנסה וביטוח לאומי נבדקים בנפרד</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>15.11</td><td>תרומות: זיכוי על בפועל, בלי הגדלה; ההחזרה לרווח מוגדלת</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>15.11</td><td>ביטוח לאומי על בסיס אחרי ניכוי 52% (נוסחה סגורה)</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>15.11</td><td>קריאת PDF רק ב--table וב--simple2</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>15.11</td><td>אישור עצמי: 2 ידניים, 5 בדיקות, 3 אקראיים</td><td><span class="badge b-ok">בתוקף</span> עם תוספות 22.11</td></tr>
+      <tr data-s="valid"><td>15.11</td><td>פנסיה: הכלל נבחר לפי סכום ההפקדה</td><td><span class="badge b-ok">בתוקף</span> אומת 19.11</td></tr>
+      <tr data-s="valid"><td>15.11</td><td>כל שיעור ניתן לשינוי במסך; כל כלל 2 בדיקות</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>15.11</td><td>שום דבר לא נשלח אוטומטית; מידע במחשב בלבד</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="replaced"><td>15.11</td><td>קרן השתלמות מקטינה את בסיס ביטוח לאומי</td><td><span class="badge b-plain">הוחלפה 22.11 (ה-2)</span> לא מקטינה, לפי החוק</td></tr>
+      <tr data-s="valid"><td>16.11</td><td>קוד בריפו נפרד mikdamot-app; חוקים כאן</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>16.11</td><td>עבודה בענף dev; כל פריסה לענף הראשי באישור נפרד</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>16.11</td><td>נתוני לקוחות ב-mikdamot-app/data, לא ב-Git</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="replaced"><td>16.11</td><td>כלל הפנסיה "7% ועוד 4%" כנראה שגוי (מומחה 1)</td><td><span class="badge b-plain">בוטל 19.11</span></td></tr>
+      <tr data-s="replaced"><td>19.11</td><td>"אני רוצה ללמוד ולבנות בעצמי"</td><td><span class="badge b-plain">הוחלפה 19.11</span> Claude בונה בשלבים</td></tr>
+      <tr data-s="valid"><td>19.11</td><td>נתונים מומצאים בבנייה; הדוח האמיתי רק בקבלה</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>19.11</td><td>החלטה מאוחרת גוברת; תיקון מסמכים רק אחרי פירוט ואישור</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>19.11</td><td>התוכנה קוראת שיעורים מענף dev</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="replaced"><td>19.11</td><td>החלק המנוכה בפנסיה מקטין גם את בסיס ב"ל (לכולם)</td><td><span class="badge b-plain">הוחלפה 22.11 (ה-2)</span> רק לא עמית מוטב</td></tr>
+      <tr data-s="replaced"><td>19.11</td><td>טלפון: 1,260 לשנה</td><td><span class="badge b-plain">הוחלפה 21.11</span> 1,380</td></tr>
+      <tr data-s="replaced"><td>19.11</td><td>רמת אבטחה בינונית</td><td><span class="badge b-plain">הוחלפה 21.11</span> בסיסית</td></tr>
+      <tr data-s="replaced"><td>19.11</td><td>הוצאות בעל העסק מוחזרות לרווח</td><td><span class="badge b-plain">הוחלפה 22.11</span> לא נרשמות</td></tr>
+      <tr data-s="replaced"><td>19.11</td><td>הצעה: רצפה בשקלים ו"לידיעה בלבד" ב-1-2</td><td><span class="badge b-plain">נדחתה 22.11</span></td></tr>
+      <tr data-s="replaced"><td>19.11</td><td>"שילם ביתר" כמצב נפרד</td><td><span class="badge b-plain">הוחלפה 22.11</span> תווית בתוך "לא תקין"</td></tr>
+      <tr data-s="valid"><td>21.11</td><td>רק עצמאים, בלי חברות</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>22.11</td><td>סף 2% בלי רצפה; 1-2 מחושב רגיל</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>22.11</td><td>רכב 55%, טלפון 50% / 1,380; התאמות סוף שנה צפויות</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>22.11</td><td>מסך "שולם עד היום"; ניכוי במקור מהספרים</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>22.11</td><td>שיטת מקדמה בכרטיס; מקדמת ב"ל חודשית</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>22.11</td><td>5 תוספות לאישור העצמי</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>22.11</td><td>מצבים קיימים ולא קיימים אצל הלקוחות</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="replaced"><td>22.11</td><td>שני מחשבים: "להחליט לפני שלב 2"</td><td><span class="badge b-plain">הוחלפה 22.11</span> כל מחשב שומר את שלו</td></tr>
+      <tr data-s="valid"><td>22.11</td><td>אין נוהל אבטחה; Claude יכין דף</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>22.11</td><td>3 לקוחות מומצאים; נתוני שנה קודמת בקבלה</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>22.11</td><td>מחיקה מהיסטוריית Git פעם אחת בסוף, באישור נפרד</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>22.11</td><td>אישור כל התשובות המוצעות ותיקוני המסמכים</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>22.11 ה-1</td><td>מכנה הפער: המס השנתי המלא לפני קיזוזים</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>22.11 ה-2</td><td>בסיס ב"ל לפי החוק: רק 52% וניכוי פנסיה של לא עמית מוטב; מתג בהגדרות</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>22.11 ה-3</td><td>נוסחת הפנסיה המדויקת (4% רק מעל 12%)</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>22.11 ה-4</td><td>0.5% למי שאינו עמית מוטב: לא מחושב עד אימות</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>22.11 ה-5</td><td>ניכוי במקור שעוד ינוכה: לא מעריכים, הלקוח מסומן</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>22.11 ה-6</td><td>טיוטה בתקופה 1-7 כמו 1-8: תשלום חד-פעמי</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>22.11 ה-7</td><td>סטייה גדולה בסוף שנה: 2%, ניתן לשינוי</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>22.11 ה-8</td><td>ב"ל ידני: שני שדות (ב"ל ובריאות), 52% רק על ב"ל</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="valid"><td>22.11 ה-9</td><td>ניכוי נוסף ידני מוריד רק מס הכנסה</td><td><span class="badge b-ok">בתוקף</span></td></tr>
+      <tr data-s="replaced"><td>22.11</td><td>להתחיל את שלב 1: "כן"</td><td><span class="badge b-plain">הוחלפה 22.11</span> "לא להתחיל בלי אישור" נוסף</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- 11 -->
+<section id="s11">
+  <h2>11. פתוח ושאלות</h2>
+  <div class="card">
+    <h3 style="margin-top:0">השאלה הפתוחה היחידה <span class="badge b-wait">לפני שלב 4</span></h3>
+    <p><b>קובץ מבנה החשבונות מריווחית.</b> קובץ אחד של עצמאי, בלי שמות ובלי סכומים. ממנו תיבנה המפה הראשונית של מסווג השורות. לא חוסם את שלבים 1-3.</p>
+    <p class="note">עד שיגיע: כל שורה לא מוכרת בדוח = "ממתין לאישור", מסווגים אותה פעם אחת והתוכנה זוכרת.</p>
+  </div>
+  <div class="grid g2">
+    <div class="card">
+      <h3 style="margin-top:0">מה נדרש ממך (לפי הסדר)</h3>
+      <ol class="calc">
+        <li>הוראה מפורשת להתחיל את שלב 1.</li>
+        <li>בסוף שלב 1: לחשב 3 לקוחות מומצאים בתוכנת הדוחות השנתיים (כחצי שעה).</li>
+        <li>לפני שלב 4: לשלוח את קובץ מבנה החשבונות.</li>
+        <li>בבדיקת הקבלה: להריץ את התוכנה על הדוח האמיתי ונתוני שנה קודמת במחשב שלך.</li>
+        <li>אישור נפרד לכל פריסה לענף הראשי, ולמחיקה מהיסטוריית Git.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">מה Claude עוד מאמת (לא שאלה אליך)</h3>
+      <ul class="clean">
+        <li>הכנסה מינימלית בביטוח לאומי אצל עצמאי עם משכורת (עד אז: מחשבים ומסמנים).</li>
+        <li>תקרת ניכוי ביטוח אובדן כושר עבודה (כרגע רק מבטלת את ה-0.5%).</li>
+        <li>נוסחאות בסיס ב"ל ברצועה המופחתת ומעל התקרה (נגזרו מהמשוואה הרשמית; נבדקות בטסט).</li>
+        <li>הכנסה לפנסיה אחרי קרן השתלמות (מקור רשמי אחד).</li>
+        <li>דוגמת עמית מוטב 2025 (240,000 / 40,000) עם הסף המדויק של 2025, בטסט הראשון של שלב 1.</li>
+        <li>פנסיה לבני 50 ומעלה מול מדריך 2026.</li>
+        <li>סדר הניכוי והזיכוי בפנסיה מול התוכנה שלך (ב-3 הלקוחות המומצאים).</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">התאמה בין המסמכים</h3>
+    <p class="note">ב-22.11 נבדקה התאמה בין מסמכי התכנון למסמכים המחייבים (CLAUDE.md, BUILD_SPEC.md, rates/). הסתירות שנמצאו תוקנו.</p>
+  </div>
+</section>
+
+<!-- 12 -->
+<section id="s12">
+  <h2>12. מסמכים</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h3 style="margin-top:0">מסמכי התכנון (קישורים)</h3>
+      <ul class="clean">
+        <li><span class="mono">SPEC.md</span> - מסמך האפיון: מה ולמה, דרישות, כללים, החלטות.</li>
+        <li><span class="mono">ARCHITECTURE.md</span> - הרכיבים, השיטה והחלופות שנדחו.</li>
+        <li><span class="mono">HLD.md</span> - <dfn title="High Level Design">תכנון כללי</dfn>: מי עושה מה, הסבב, המסכים.</li>
+        <li><span class="mono">LLD.md</span> - <dfn title="Low Level Design">תכנון מפורט</dfn>: קבצים, שדות, נוסחאות, בדיקות.</li>
+      </ul>
+      <span class="gl">הקבצים נפתחים כטקסט בדפדפן או בעורך.</span>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">שני ריפואים</h3>
+      <p><b>mikdamot-check</b> - חוקים, מסמכים, החלטות, שיעורים. בלי קוד.</p>
+      <p><b>mikdamot-app</b> - קוד, טסטים, מסכים, start.bat. בלי חוקים ובלי שיעורים. נתוני לקוחות ב-data (לא ב-Git).</p>
+      <span class="gl">ריפו = תיקייה שמנוהלת ב-Git. ענף dev לעבודה; master / main לגרסה הסופית, רק באישורך.</span>
+    </div>
+  </div>
+  <h3>mikdamot-check (C:\github\mikdamot-check)</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>קובץ</th><th>מה יש בו</th><th>מעמד</th></tr></thead>
+    <tbody>
+      <tr><td class="mono"><span class="mono">CLAUDE.md</span></td><td>הוראות הפרויקט והחלטות</td><td><span class="badge b-acc">מחייב</span></td></tr>
+      <tr><td class="mono"><span class="mono">BUILD_SPEC.md</span></td><td>מפרט הבנייה</td><td><span class="badge b-acc">מחייב</span></td></tr>
+      <tr><td class="mono"><span class="mono">rates/2026.json</span></td><td>טבלת השיעורים שהתוכנה קוראת</td><td><span class="badge b-acc">מחייב, עותק יחיד</span></td></tr>
+      <tr><td class="mono"><span class="mono">rates/README.md</span></td><td>הסבר בעברית לטבלה</td><td><span class="badge b-acc">מחייב</span></td></tr>
+      <tr><td class="mono"><span class="mono">docs/QUESTIONS.md</span></td><td>שאלות פתוחות (המקום היחיד)</td><td><span class="badge b-acc">מחייב</span></td></tr>
+      <tr><td class="mono"><span class="mono">docs/review/ANSWERS_PROPOSED.md</span></td><td>תשובות מוצעות, אושרו 22.11</td><td><span class="badge b-acc">מחייב</span></td></tr>
+      <tr><td class="mono"><span class="mono">docs/review/round2/USER_ANSWERS.md</span></td><td>התשובות שלך 22.11</td><td><span class="badge b-acc">מחייב</span></td></tr>
+      <tr><td class="mono">docs/review/round2/</td><td>סבב 2: FOR_USER, JUDGE_REPORT, expert-1..3, INPUT</td><td><span class="badge b-plain">תיעוד</span></td></tr>
+      <tr><td class="mono">docs/review/</td><td>סבב 1: JUDGE_REPORT, expert-1..3; QUESTIONS_FULL (112 שאלות)</td><td><span class="badge b-plain">תיעוד / ארכיון</span></td></tr>
+      <tr><td class="mono">docs/OPEN_ISSUES.md</td><td>ממצאים 15.11</td><td><span class="badge b-plain">ארכיון בלבד</span></td></tr>
+      <tr><td class="mono">docs/deck-src/</td><td>מקור המצגת (שקפים)</td><td><span class="badge b-plain">מה שהובטח לך</span></td></tr>
+      <tr><td class="mono">docs/plan-presentation.pdf</td><td>המצגת</td><td><span class="badge b-plain">רק לבקשתך</span></td></tr>
+      <tr><td class="mono">docs/design/</td><td>SPEC, ARCHITECTURE, HLD, LLD</td><td><span class="badge b-plain">מסכם</span></td></tr>
+      <tr><td class="mono">docs/overview/index.html</td><td>הדף הזה</td><td><span class="badge b-plain">מסכם</span></td></tr>
+    </tbody>
+  </table></div>
+  <h3>mikdamot-app (C:\github\mikdamot-app) - מבנה מתוכנן</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>מיקום</th><th>מה יהיה בו</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">start.bat, config.json, README.md</td><td>הפעלה בלחיצה כפולה, הגדרות טכניות, הוראות התקנה מחדש</td></tr>
+      <tr><td class="mono">app/</td><td>הקוד: טוען שיעורים, מנוע חישוב (engine), מאגר, יומן, קורא PDF, מסווג, אישור עצמי, מדגם, הודעות, ייצוא, גיבוי, שמירה, קליטה, שרת</td></tr>
+      <tr><td class="mono">web/</td><td>המסכים, הכל מקומי; web/help למדריך ולדפי הנוהל</td></tr>
+      <tr><td class="mono">tools/poppler/</td><td>הכלי pdftotext, ארוז עם התוכנה</td></tr>
+      <tr><td class="mono">tests/</td><td>טסטים, קובץ זהב ונתונים מומצאים</td></tr>
+      <tr><td class="mono">data/</td><td>נתוני לקוחות אמיתיים. לא ב-Git, לא נפתח בשלבי הבנייה</td></tr>
+    </tbody>
+  </table></div>
+  <footer>
+    <p>הדף נבנה מתוך המסמכים המחייבים ומסמכי התכנון, מצב 22.11.2026. אין בו שמות לקוחות או נתונים אמיתיים. שיעורי מס משתנים: לפני הסתמכות, בודקים ב-gov.il וב-btl.gov.il.</p>
+  </footer>
+</section>
+
+</div>
+</main>
+
+<script>
+(function(){
+  try{
+    // round step highlight
+    var rows=document.querySelectorAll('#round tr.step');
+    var pills=document.querySelectorAll('#pills .pill');
+    var comps=document.querySelectorAll('#comps .comp, .diagram .box');
+    function clearAll(){
+      for(var i=0;i<rows.length;i++)rows[i].classList.remove('sel');
+      for(var j=0;j<pills.length;j++)pills[j].classList.remove('on');
+      for(var k=0;k<comps.length;k++)comps[k].classList.remove('on');
+    }
+    function pick(row){
+      var was=row.classList.contains('sel');
+      clearAll();
+      if(was)return;
+      row.classList.add('sel');
+      var ids=(row.getAttribute('data-c')||'').split(',');
+      function mark(list){for(var i=0;i<list.length;i++){if(ids.indexOf(list[i].getAttribute('data-c'))>-1)list[i].classList.add('on');}}
+      mark(pills);mark(comps);
+    }
+    for(var i=0;i<rows.length;i++){
+      rows[i].addEventListener('click',function(){pick(this);});
+      rows[i].addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();pick(this);}});
+    }
+    // decisions filter
+    var fb=document.querySelectorAll('#dfilter button');
+    var drows=document.querySelectorAll('#decisions tbody tr');
+    for(var b=0;b<fb.length;b++){
+      fb[b].addEventListener('click',function(){
+        var f=this.getAttribute('data-f');
+        for(var x=0;x<fb.length;x++)fb[x].classList.toggle('on',fb[x]===this);
+        for(var y=0;y<drows.length;y++){
+          var s=drows[y].getAttribute('data-s');
+          drows[y].classList.toggle('hide',!(f==='all'||f===s));
+        }
+      });
+    }
+    // active nav link
+    var links=document.querySelectorAll('nav.side a');
+    var secs=document.querySelectorAll('main section');
+    if('IntersectionObserver' in window){
+      var io=new IntersectionObserver(function(es){
+        es.forEach(function(e){
+          if(e.isIntersecting){
+            var id=e.target.id;
+            for(var i=0;i<links.length;i++)links[i].classList.toggle('active',links[i].getAttribute('href')==='#'+id);
+          }
+        });
+      },{rootMargin:'-20% 0px -70% 0px'});
+      for(var s=0;s<secs.length;s++)io.observe(secs[s]);
+    }
+  }catch(err){}
+})();
+</script>
+</body>
+</html>
